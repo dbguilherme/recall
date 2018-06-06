@@ -1,0 +1,359 @@
+#!/bin/bash
+
+echo "##################starting scal"
+export LANG=C
+export LC_ALL=C
+R=100
+
+NDUN=0
+L=10
+R=100
+export LAMBDA=0.0001
+TOPIC=$1
+#NDOCS=`cat docfils | wc -l`
+total_relevantes=0
+
+if [ -f synthetic_seed ]; then
+    cat synthetic_seed > seed.$TOPIC
+else
+    echo "file not exists /tmp/seed_syntetic"
+fi
+
+
+
+
+rm -f new[0-9][0-9].$TOPIC tail[0-9][0-9].$TOPIC self*.$TOPIC gold*.$TOPIC
+rm -f sub_new[0-9][0-9].$TOPIC 
+touch new00.$TOPIC
+#rm rel.$TOPIC.fil
+rm -f trainset
+
+# 
+# 1: Find a relevant seed document using ad-hoc search, or # construct a synthetic relevant document from the topic # description.
+# 2: The initial training set consists of the seed docrecaument identified in step 1, labeled “relevant.”
+
+echo "# 3: Draw a large uniform random sample U of size N from the document population."
+
+shuf -n  20000  docfils.tr0 | cut -d$' ' -f2  > sample.$TOPIC
+
+
+echo "# 4: Select a sub-sample size n."
+
+cat sample.$TOPIC | shuf -n 30 | cut -d$'\t' -f2           > sub_N.$TOPIC
+
+
+echo "# 4: join 1 sub- sample."
+
+sort -k2 sample.$TOPIC | join -11 - svm.fil.tr0 |  sort -n > sample.fill
+echo "# 4: join 2 sub- sample."
+
+sort -k2 seed.$TOPIC | join -11 - svm.fil.tr0 |  sort -n >> sample.fill
+
+
+
+cat sample.fill | sort -k1 | uniq > temp 
+
+
+mv temp sample.fill
+
+
+cp sample.fill w
+echo "# 5: Set the initial batch size B to 1."
+B=1
+
+echo "# 6: Set R̂ to 0."
+R=0
+labelEffort=0
+truePositive=0
+i=0
+export u_size=`wc -l < w`
+echo "u_size $u_size----"
+while [ $u_size -gt 10 ]
+do
+    i=$(($i+1))
+    export N=$i
+    #echo "valor do 1 ----$TOPIC"
+    
+    
+    
+    cat seed.$TOPIC sub_new[0-99].$TOPIC | uniq > seed
+    cat seed | sort | uniq | join - rel.$TOPIC.fil | cut -d' ' -f1 | sed -e 's/^/1 /' > x
+    cat seed | sort | uniq | join - rel.$TOPIC.fil -v1 | cut -d' ' -f1 | sed -e 's/^/-1 /' >> x
+echo "# 7: Temporarily augment the training set by adding 100 random documents from the U , temporarily labeled “not relevant.”"
+    #cat sample.$TOPIC | shuf -n 100 | cut -d' ' -f1 | sed -e 's/^/-1 /' >> x
+    cat w | shuf -n 100 | sort | join -v1 - rel.$TOPIC.fil | cut -d' ' -f1 | sed -e 's/^/-1 /' >> x
+    
+    
+    
+
+echo "# 8: Construct a classifier from the training set."
+
+    sort -k2 x | join -12 - sample.fill | cut -d' ' -f2-  | sort -n > trainset
+   
+    
+echo " run classifier"    
+      ../sof*/src/sof*ml --iterations 2000000 --training_file trainset --dimensionality 1100000 --model_out svm_model
+      
+      
+      ../sof*/src/sof*ml --test_file w --dimensionality 1100000 --model_in svm_model --results_file pout 
+
+
+
+echo "# 10: Select the highest-scoring B  $B documents from U ."
+
+#      cut -f1 pout* | ./fixnum | cat -n | join -o2.2,1.2 -t'	' - docfils > inlr.out
+#       sort seed | join -v2 - inlr.out | sort -rn -k2 | cut -d' ' -f1 > new$N.$1
+#       cat seed.$1 new[0-9][0-9].$1 > x
+#       head -1000 new$N.$1 > y ; mv y new$N.$1
+        
+             cat w | cut -d' ' -f1 | tr -d ' ' > docfils_temp
+             #cat pout  |  cut -d$'\t' -f1 | tr -d ' ' > pout_temp
+             
+#              #eliminate empty rows 
+#              sed -i '/^\s*$/d' pout_temp
+#              sed -i '/^\s*$/d' docfils_temp
+#              #merge files 
+#              paste  -s docfils_temp pout_temp | sort -k1 > temp
+#              cat seed | join -1 1 -2 1 -v2 - temp > inlr.out
+#             
+#             
+#            # cut -f1 pout.svm.test.$TOPIC.* | ../fixnum | cat -n | join -o2.2,1.2 -t$'\t' - docfils.$TOPIC > inlr.out
+#             sort seed | join -v2 - inlr.out | sort  -k2 > newtopic
+#             join -1 1 -2 2 -v2 <(sort -k 1 seed) <(sort -k 2 pout) > temp
+             python sort.py docfils_temp pout seed
+             
+           #  cat seed | join -v2 - newtopic.sort > new$N.$TOPIC
+             tail -$B  newtopic.sort  | cut -d' ' -f1 >  new$N.$TOPIC
+
+echo "11: If R̂ = 1 or B ≤ n, let b = B; otherwise let b = n."
+       echo "valor atual do B ---- $B e do b é $b"
+       if [ "$R" -eq 1 ] || [ "$B" -le 30 ]
+       then
+            export b=`echo $B`
+            echo "valor do b  é $b"
+       else
+            export b=`echo 30`
+            echo "valor do b é $b"
+       fi
+       
+echo "valor do b $b"
+echo "# 12: Draw a random sub-sample of size b from the B docu-ments."
+shuf -n $b  new$N.$TOPIC > sub_new$N.$TOPIC
+
+    
+
+labelEffort=$(($labelEffort+$b))
+
+# " 13: Review the sub-sample, labeling each as “relevant” or “not relevant.”"
+# 14: Add the labeled sub-sample to the training set.
+
+echo "# 15: Remove the B documents from U ."
+sort  new$N.$TOPIC | join -v2 - w > temp 
+mv temp w
+    
+echo "                      novo valor para o sample `wc -l w`"
+echo "# 16: Add r·B  to R̂, where r is the number of relevant documents in the sub-sample."
+
+export r=`cat sub_new$N.$TOPIC | sort | uniq | join - rel.$TOPIC.fil | uniq | wc -l`
+export total=`cat sub_new$N.$TOPIC |  wc -l`
+echo "numero de documentos relevantes coletados---- $r de um total de $total"
+#cat sub_new$N.$TOPIC
+
+
+temp=$(($r*$B))
+temp1=$(($temp/$b))
+export R=$(($R+$temp1))
+# export new_r= $(((r * B ) / b))
+# export C= $((B + new_r ))
+echo "novo R $R---"
+
+echo "# 17: Increase B by 10"
+
+temp=`echo "scale=5; ($B / 10)" | bc`
+
+
+int=`echo $temp |  awk '{print ($0-int($0)>0)?int($0)+1:int($0)}'`
+echo "temp ----------$temp----- $int"
+#int=${temp%.*}
+export B=$(($B+$int))
+
+echo "novo B ---- $B"
+
+export u_size=`wc -l < w`
+
+
+RELTRAINDOC=`grep -E "^1\b" trainset | wc -l`
+NOTRELTRAINDOC=`grep -E "^-1\b" trainset | wc -l`
+PREVALENCERATE=`echo "scale=4; $RELTRAINDOC / ($RELTRAINDOC + $NOTRELTRAINDOC)" | bc`
+#echo $RELTRAINDOC $NOTRELTRAINDOC $PREVALENCERATE
+truePositive=$(($RELTRAINDOC))
+
+echo "----------------------------------------$labelEffort  $truePositive"
+
+
+
+# 18: Repeat steps 7 through 16 until U is exhausted.
+# 19: Train the final classifier on all labeled documents.
+# R̂
+
+# .        
+        
+        
+
+done   
+echo " 20: Estimate ρ̂ = 1.05 "
+export prevalence=`echo "scale=5; ($R * 1.05) / 20000 " | bc`
+echo "prevalence $prevalence"
+      
+export m=`echo "scale=5; ($prevalence * 20000 ) * 0.9 " | bc`       
+echo "# 19: Train the final classifier on all labeled documents."
+
+int=${m%.*}
+
+cat seed.$TOPIC sub_new[0-99].$TOPIC | uniq > seed
+cat seed | sort | uniq | join - rel.$TOPIC.fil | cut -d' ' -f1 | sed -e 's/^/1 /' > x
+cat seed | sort | uniq | join - rel.$TOPIC.fil -v1 | cut -d' ' -f1 | sed -e 's/^/-1 /' >> x      
+
+
+sort -k2 x | join -12 - svm.fil.tr0 | cut -d' ' -f2-  | sort -n > trainset
+
+
+../sof*/src/sof*ml --iterations 2000000 --training_file trainset --dimensionality 1100000 --model_out svm_model
+      
+      
+../sof*/src/sof*ml --test_file svm.fil.tr0 --dimensionality 1100000 --model_in svm_model --results_file pout 
+
+
+ cat svm.fil.tr0 | cut -d' ' -f1 | tr -d ' ' > docfils_temp
+ 
+ 
+python sort.py docfils_temp pout seed
+             
+           #  cat seed | join -v2 - newtopic.sort > new$N.$TOPIC
+tail -$int  newtopic.sort  | cut -d' ' -f1 >  result
+
+export r=`cat result| sort | uniq | join - rel.$TOPIC.fil | uniq | wc -l`
+
+echo "resultado final $r ------$int"
+
+#     cat svm.fil.$TOPIC | shuf -n $R | sed -e's/[^ ]*/-1/' >> trainset1 &
+#     (
+#             #cat new[0-9][0-9].$TOPIC >> seed
+#             #cut -f2 docfil | join - $TOPIC.clusteringJudged.doc.sorted | cut -d' ' -f2 >> seed
+#             #cat seed | sort | join - rel.$TOPIC.fil | sed -e 's/^/1 /' > x
+#             #cat seed | sort | join -v1 - rel.$TOPIC.fil | join -v1 - $TOPIC.clusteringNotRel.doc.sorted | sort -R | head -50000 | sed -e 's/^/-1 /' >> x
+#             cat seed | sort | join -v1 - rel.$TOPIC.fil | shuf -n 50000 | sed -e 's/^/-1 /' >> x
+#             #cut -d' ' -f2 x | ../indexer ../$CORP.db $KEYSIZE $VALSIZE | cut -d' ' -f2- |\
+#             sort -k2 x | join -12 - svm.fil.$TOPIC | cut -d' ' -f2- | sort -n >> trainset
+#             ) &
+#             wait
+#             cat trainset1  >> trainset
+#             rm trainset1 
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+#     
+#     
+#     #Calculate relevant documents prevalence rate in the traning set
+# 
+#             RELTRAINDOC=`grep -E "^1\b" trainset | wc -l`
+#             NOTRELTRAINDOC=`grep -E "^-1\b" trainset | wc -l`
+#             PREVALENCERATE=`echo "scale=4; $RELTRAINDOC / ($RELTRAINDOC + $NOTRELTRAINDOC)" | bc`
+#             echo $RELTRAINDOC $NOTRELTRAINDOC $PREVALENCERATE >> prevalence.rate
+#             
+#     echo "criado o training set"
+#     
+#   
+# #     
+#             cat docfils.tr0 | cut -d' ' -f1 | tr -d ' ' > docfils_temp
+#             cat pout.svm.test.tr0.1  | cut -d$'\t' -f1  | tr -d ' ' > pout_temp
+#             paste  docfils_temp pout_temp> inlr.out
+#             
+#             
+#            # cut -f1 pout.svm.test.$TOPIC.* | ../fixnum | cat -n | join -o2.2,1.2 -t$'\t' - docfils.$TOPIC > inlr.out
+#             sort seed | join -v2 - inlr.out | sort  -k2 >newtopic
+#             python sort.py
+#             cat newtopic.sort | cut -d' ' -f1 > new$N.$TOPIC
+#             
+#             
+#             cat new[0-9][0-9].$TOPIC > x
+#             if [ "$N" != "99" ] ; then
+#                 echo "selecting $L files"
+#                 tail -$L new$N.$TOPIC > y ; mv y new$N.$TOPIC
+#             fi
+#             temp=`wc -l < new$N.$TOPIC`
+#             labelsize=$((temp+labelsize))
+#            
+#             #sed -e 's/.*\///' -e 's/.*/"&"/' new$N.$TOPIC | tr '\n' ',' | sed -e 's/^/[/' -e 's/,$/]/' | curl -XPOST -H 'Content-Type:application/json' "$TRSERVER/judge/$LOGIN/$TOPIC" -d @- | tr '}' '\n' | grep 'judgement.:1' | cut -d'"' -f4 | sort | join -o2.2 - docfil >> rel.$TOPIC.fil
+#             # python ../doJudgementMain.py --topic=$TOPIC --judgefile=../judgement/qrels.$JUDGECLASS.list --input=new$N.$TOPIC --output=rel.$TOPIC.Judged.doc.list --memorydumpfile=judge.effort.$TOPIC."$PURPOSE".dump
+#             echo "valor do n $N"
+#             python2.7 ../doJudgementMain.py --topic="tr0" --judgefile=../judgement/qrels.oldreut.list --input=new` echo $N`.$TOPIC --output=rel.$TOPIC.Judged.doc.list --record=$TOPIC.record.list
+#            
+#            
+#            # rm -rf rel.$TOPIC.Judged.doc.list
+#             # touch rel.$TOPIC.Judged.doc.list
+#             # while IFS='' read -r line || [[ -n $line ]]; do
+#             #    RELFLAG=`cat ../judgement/qrels.$JUDGECLASS.list | grep "$TOPIC 0 $line 1" | wc -l`
+# 
+#             #    if [ $RELFLAG -gt "0" ] ; then
+#             #       echo $line 1 >> rel.$TOPIC.Judged.doc.list
+#             #       echo $line 1 >> $TOPIC.record.list
+#             #    else
+#             #       echo $line 0 >> $TOPIC.record.list
+#             #    fi
+#             # done < new$N.$TOPIC
+#             cat rel.$TOPIC.Judged.doc.list >> rel.$TOPIC.fil
+#             cat rel.$TOPIC.Judged.doc.list > rel.$TOPIC.$N.Judged.doc.list
+# 
+#             RELFINDDOC=`wc -l < rel.$TOPIC.Judged.doc.list`
+#             RELRATE=`echo "scale=4; $RELFINDDOC / $L" | bc`
+#             CURRENTREL=`wc -l < rel.$TOPIC.fil`
+#             echo $RELFINDDOC $L $RELRATE $CURRENTREL $labelsize >> rel.rate
+# 
+#             sort rel.$TOPIC.fil | sed -e 's/$/ 1/' > prel.$TOPIC
+#             
+#             cut -d' ' -f1 prel.$TOPIC > rel.$TOPIC.fil
+# 
+#             NDUN=$((NDUN+L))
+#             L=$((L+(L+9)/10))
+#             
+#              echo "----------------------judgement size of `wc -l new$N.$TOPIC` labelsize ---$labelsize--- --$temp--  positivos local ---  `wc -l rel.$TOPIC.Judged.doc.list` positivos global $CURRENTREL"
+# # #     
+# # #     
+# # #     
+# # # #      #monta o arquvo inlr com as label e a saida da regressão
+# # # #       cut -f1 pout.svm.test.* | ./fixnum | cat -n | join -o2.2,1.2 -t'	' - docfils > inlr.out
+# # # # #       
+# # # #       #seleciona o que está no arquivo v2 2
+# # # #       sort seed | join -v2 - inlr.out | sort -rn -k2 | cut -d' ' -f1 > new$N.$TOPIC
+# # # #       cat seed.$TOPIC new[0-9][0-9].$TOPIC > x
+# # # #       head -1000 new$N.$TOPIC > y ; mv y new$N.$TOPIC
+# # # #       #sort new$N.$TOPIC > y
+# # # #       #join -12 -o1.1,1.2 zztemp y | sort -n | cut -d' ' -f2 | head -500 | sort > new$N.$TOPIC
+# # # #       #join -12 -o1.1,1.2 rrtemp y | join -v1 -o1.1,1.2 - new$N.$TOPIC | sort -n | cut -d' ' -f2 | head -500 | sort >> new$N.$TOPIC
+# # # #       #sort new$N.$TOPIC > y
+# # # #       #join -v1 -12 -o1.1,1.2 zztemp y > z ; mv z zztemp
+# # # #       #join -v1 -12 -o1.1,1.2 rrtemp y > z ; mv z rrtemp
+# # # #       
+# #       #export M=`cat rel.$TOPIC.fil_original | wc -l`
+# #       #cat -n x | sort -k2 | join -12 - rel.$TOPIC.fil_original | sort -n -k2 | cut -d' ' -f2 | sed -e 's/$/ 1/' | ./count1000 $M > self$N.$TOPIC
+# #       #export M=`cut -d' ' -f2 prel.$TOPIC | ./count`
+#       export M=2454
+#       cat -n x | sort -k2 | join -o1.1,2.2 -12 - prel.tr0 | sort -n | ./count1000 $M > gold$N.$1
+#       echo "fim"
+     #  break;
+    #sleep 1000      
+
+     # break
+
+
+
+
