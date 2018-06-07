@@ -20,8 +20,6 @@ else
 fi
 
 
-
-
 rm -f new[0-9][0-9].$TOPIC tail[0-9][0-9].$TOPIC self*.$TOPIC gold*.$TOPIC
 rm -f sub_new[0-9][0-9].$TOPIC 
 touch new00.$TOPIC
@@ -34,7 +32,7 @@ rm -f trainset
 
 echo "# 3: Draw a large uniform random sample U of size N from the document population."
 
-shuf -n  20000  docfils.tr0 | cut -d$' ' -f2  > sample.$TOPIC
+shuf -n  1000  docfils.tr0 | cut -d$' ' -f2  > sample.$TOPIC
 
 
 echo "# 4: Select a sub-sample size n."
@@ -75,8 +73,8 @@ do
     #echo "valor do 1 ----$TOPIC"
     
     
+    cat seed.$TOPIC sub_new*.$TOPIC | uniq > seed
     
-    cat seed.$TOPIC sub_new[0-99].$TOPIC | uniq > seed
     cat seed | sort | uniq | join - rel.$TOPIC.fil | cut -d' ' -f1 | sed -e 's/^/1 /' > x
     cat seed | sort | uniq | join - rel.$TOPIC.fil -v1 | cut -d' ' -f1 | sed -e 's/^/-1 /' >> x
 echo "# 7: Temporarily augment the training set by adding 100 random documents from the U , temporarily labeled “not relevant.”"
@@ -105,7 +103,7 @@ echo "# 10: Select the highest-scoring B  $B documents from U ."
 #       sort seed | join -v2 - inlr.out | sort -rn -k2 | cut -d' ' -f1 > new$N.$1
 #       cat seed.$1 new[0-9][0-9].$1 > x
 #       head -1000 new$N.$1 > y ; mv y new$N.$1
-        
+        #sub_new$N.$TOPIC
              cat w | cut -d' ' -f1 | tr -d ' ' > docfils_temp
              #cat pout  |  cut -d$'\t' -f1 | tr -d ' ' > pout_temp
              
@@ -166,7 +164,8 @@ export R=$(($R+$temp1))
 # export new_r= $(((r * B ) / b))
 # export C= $((B + new_r ))
 echo "novo R $R---"
-
+echo "$i $R" >> valor_R
+cat  w | cut -d' ' -f1 > U$N
 echo "# 17: Increase B by 10"
 
 temp=`echo "scale=5; ($B / 10)" | bc`
@@ -202,15 +201,15 @@ echo "----------------------------------------$labelEffort  $truePositive"
 
 done   
 echo " 20: Estimate ρ̂ = 1.05 "
-export prevalence=`echo "scale=5; ($R * 1.05) / 20000 " | bc`
+export prevalence=`echo "scale=5; ($R * 1.05) / 1000 " | bc`
 echo "prevalence $prevalence"
       
-export m=`echo "scale=5; ($prevalence * 20000 ) * 0.9 " | bc`       
+export m=`echo "scale=5; ($prevalence * 1000 ) * 0.9 " | bc`       
 echo "# 19: Train the final classifier on all labeled documents."
 
 int=${m%.*}
 
-cat seed.$TOPIC sub_new[0-99].$TOPIC | uniq > seed
+cat seed.$TOPIC sub_new[0-9][0-9].$TOPIC | uniq > seed
 cat seed | sort | uniq | join - rel.$TOPIC.fil | cut -d' ' -f1 | sed -e 's/^/1 /' > x
 cat seed | sort | uniq | join - rel.$TOPIC.fil -v1 | cut -d' ' -f1 | sed -e 's/^/-1 /' >> x      
 
