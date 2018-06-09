@@ -70,15 +70,15 @@ while [ $u_size -gt 10 ]
 do
     i=$(($i+1))
     export N=$i
-    #echo "valor do 1 ----$TOPIC"
+   
     
     
-    cat seed.$TOPIC sub_new*.$TOPIC | uniq > seed
-    
+    cat seed.$TOPIC sub_new*.$TOPIC | uniq > seed    
     cat seed | sort | uniq | join - rel.$TOPIC.fil | cut -d' ' -f1 | sed -e 's/^/1 /' > x
     cat seed | sort | uniq | join - rel.$TOPIC.fil -v1 | cut -d' ' -f1 | sed -e 's/^/-1 /' >> x
+    
 echo "# 7: Temporarily augment the training set by adding 100 random documents from the U , temporarily labeled “not relevant.”"
-    #cat sample.$TOPIC | shuf -n 100 | cut -d' ' -f1 | sed -e 's/^/-1 /' >> x
+    
     cat w | shuf -n 100 | sort | join -v1 - rel.$TOPIC.fil | cut -d' ' -f1 | sed -e 's/^/-1 /' >> x
     
     
@@ -90,106 +90,84 @@ echo "# 8: Construct a classifier from the training set."
    
     
 echo " run classifier"    
-      ../sof*/src/sof*ml --iterations 2000000 --training_file trainset --dimensionality 1100000 --model_out svm_model
-      
-      
-      ../sof*/src/sof*ml --test_file w --dimensionality 1100000 --model_in svm_model --results_file pout 
+    ../sof*/src/sof*ml --iterations 2000000 --training_file trainset --dimensionality 1100000 --model_out svm_model
+    ../sof*/src/sof*ml --test_file w --dimensionality 1100000 --model_in svm_model --results_file pout 
 
-cp svm_model svm_model$N
+    cp svm_model svm_model$N
 
 echo "# 10: Select the highest-scoring B  $B documents from U ."
 
-#      cut -f1 pout* | ./fixnum | cat -n | join -o2.2,1.2 -t'	' - docfils > inlr.out
-#       sort seed | join -v2 - inlr.out | sort -rn -k2 | cut -d' ' -f1 > new$N.$1
-#       cat seed.$1 new[0-9][0-9].$1 > x
-#       head -1000 new$N.$1 > y ; mv y new$N.$1
-        #sub_new$N.$TOPIC
-             cat w | cut -d' ' -f1 | tr -d ' ' > docfils_temp
-             #cat pout  |  cut -d$'\t' -f1 | tr -d ' ' > pout_temp
+     cat w | cut -d' ' -f1 | tr -d ' ' > docfils_temp
+     python sort.py docfils_temp pout seed 1
              
-#              #eliminate empty rows 
-#              sed -i '/^\s*$/d' pout_temp
-#              sed -i '/^\s*$/d' docfils_temp
-#              #merge files 
-#              paste  -s docfils_temp pout_temp | sort -k1 > temp
-#              cat seed | join -1 1 -2 1 -v2 - temp > inlr.out
-#             
-#             
-#            # cut -f1 pout.svm.test.$TOPIC.* | ../fixnum | cat -n | join -o2.2,1.2 -t$'\t' - docfils.$TOPIC > inlr.out
-#             sort seed | join -v2 - inlr.out | sort  -k2 > newtopic
-#             join -1 1 -2 2 -v2 <(sort -k 1 seed) <(sort -k 2 pout) > temp
-             python sort.py docfils_temp pout seed 1
-             
-           #  cat seed | join -v2 - newtopic.sort > new$N.$TOPIC
-             tail -$B  newtopic.sort  | cut -d' ' -f1 >  new$N.$TOPIC
+     tail -$B  newtopic.sort  | cut -d' ' -f1 >  new$N.$TOPIC
 
 echo "11: If R̂ = 1 or B ≤ n, let b = B; otherwise let b = n."
-       echo "valor atual do B ---- $B e do b é $b"
+ 
+ echo "valor atual do B ---- $B e do b é $b"
        if [ "$R" -eq 1 ] || [ "$B" -le 30 ]
        then
             export b=`echo $B`
-            echo "valor do b  é $b"
+       
        else
             export b=`echo 30`
-            echo "valor do b é $b"
+       
        fi
        
-       
-
-echo "valor do b $b"
+        echo "valor do b $b"
+        
+        
 echo "# 12: Draw a random sub-sample of size b from the B docu-ments."
-shuf -n $b  new$N.$TOPIC > sub_new$N.$TOPIC
+    shuf -n $b  new$N.$TOPIC > sub_new$N.$TOPIC
 
     
+echo  " 13: Review the sub-sample, labeling each as “relevant” or “not relevant.”"
+    labelEffort=$(($labelEffort+$b))
 
-labelEffort=$(($labelEffort+$b))
 
-# " 13: Review the sub-sample, labeling each as “relevant” or “not relevant.”"
 # 14: Add the labeled sub-sample to the training set.
 
 echo "# 15: Remove the B documents from U ."
-sort  new$N.$TOPIC | join -v2 - w > temp 
-mv temp w
+    sort  new$N.$TOPIC | join -v2 - w > temp 
+    mv temp w
     
-echo "                      novo valor para o sample `wc -l w`"
+    echo "                      novo valor para o sample `wc -l w`"
 echo "# 16: Add r·B  to R̂, where r is the number of relevant documents in the sub-sample."
 
-export r=`cat sub_new$N.$TOPIC | sort | uniq | join - rel.$TOPIC.fil | uniq | wc -l`
-export total=`cat sub_new$N.$TOPIC |  wc -l`
+    export r=`cat sub_new$N.$TOPIC | sort | uniq | join - rel.$TOPIC.fil | uniq | wc -l`
+    export total=`cat sub_new$N.$TOPIC |  wc -l`
 echo "numero de documentos relevantes coletados---- $r de um total de $total"
 #cat sub_new$N.$TOPIC
 
 
-temp=$(($r*$B))
-temp1=$(($temp/$b))
-export R=$(($R+$temp1))
-# export new_r= $(((r * B ) / b))
-# export C= $((B + new_r ))
-echo "novo R $R---"
-echo "$i $R" >> valor_R
-cat newtopic.sort > U$N
+    temp=$(($r*$B))
+    temp1=$(($temp/$b))
+    export R=$(($R+$temp1))
+    
+    echo "novo R $R---"
+    echo "$i $R" >> valor_R
+    cat newtopic.sort > U$N
 echo "# 17: Increase B by 10"
 
-temp=`echo "scale=5; ($B / 10)" | bc`
+    temp=`echo "scale=5; ($B / 10)" | bc`
+
+    int=`echo $temp |  awk '{print ($0-int($0)>0)?int($0)+1:int($0)}'`
+    echo "temp ----------$temp----- $int"
+    #int=${temp%.*}
+    export B=$(($B+$int))
+
+    echo "novo B ---- $B"
+
+    export u_size=`wc -l < w`
 
 
-int=`echo $temp |  awk '{print ($0-int($0)>0)?int($0)+1:int($0)}'`
-echo "temp ----------$temp----- $int"
-#int=${temp%.*}
-export B=$(($B+$int))
+    RELTRAINDOC=`grep -E "^1\b" trainset | wc -l`
+    NOTRELTRAINDOC=`grep -E "^-1\b" trainset | wc -l`
+    PREVALENCERATE=`echo "scale=4; $RELTRAINDOC / ($RELTRAINDOC + $NOTRELTRAINDOC)" | bc`
+    #echo $RELTRAINDOC $NOTRELTRAINDOC $PREVALENCERATE
+    truePositive=$(($RELTRAINDOC))
 
-echo "novo B ---- $B"
-
-export u_size=`wc -l < w`
-
-
-RELTRAINDOC=`grep -E "^1\b" trainset | wc -l`
-NOTRELTRAINDOC=`grep -E "^-1\b" trainset | wc -l`
-PREVALENCERATE=`echo "scale=4; $RELTRAINDOC / ($RELTRAINDOC + $NOTRELTRAINDOC)" | bc`
-#echo $RELTRAINDOC $NOTRELTRAINDOC $PREVALENCERATE
-truePositive=$(($RELTRAINDOC))
-
-echo "----------------------------------------$labelEffort  $truePositive"
+    echo "----------------------------------------$labelEffort  $truePositive"
 
 
 
@@ -203,50 +181,40 @@ echo "----------------------------------------$labelEffort  $truePositive"
 
 done   
 echo " 20: Estimate ρ̂ = 1.05 "
-export prevalence=`echo "scale=5; ($R * 1.05) / $NDUN  " | bc`
-echo "prevalence $prevalence"
-      
-export m=`echo "scale=5; ($prevalence * $NDUN ) * 0.9 " | bc`       
+    export prevalence=`echo "scale=5; ($R * 1.05) / $NDUN  " | bc`
+    echo "prevalence $prevalence"
+        
+    export m=`echo "scale=5; ($prevalence * $NDUN ) * 0.95 " | bc`       
+    
+    int=${m%.*}
+        
 echo "# 19: Train the final classifier on all labeled documents."
 
-int=${m%.*}
+    cat seed.$TOPIC sub_new*.$TOPIC synthetic_seed | uniq > seed
+    cat seed | sort | uniq | join - rel.$TOPIC.fil | cut -d' ' -f1 | sed -e 's/^/1 /' > x
+    cat seed | sort | uniq | join - rel.$TOPIC.fil -v1 | cut -d' ' -f1 | sed -e 's/^/-1 /' >> x      
 
-
-
-
-
-cat seed.$TOPIC sub_new*.$TOPIC | uniq > seed
-cat seed | sort | uniq | join - rel.$TOPIC.fil | cut -d' ' -f1 | sed -e 's/^/1 /' > x
-cat seed | sort | uniq | join - rel.$TOPIC.fil -v1 | cut -d' ' -f1 | sed -e 's/^/-1 /' >> x      
-
-
-sort -k2 x | join -12 - svm.fil.tr0 | cut -d' ' -f2-  | sort -n > trainset
-
-
-../sof*/src/sof*ml --iterations 2000000 --training_file trainset --dimensionality 1100000 --model_out svm_model
+    sort -k2 x | join -12 - svm.fil.tr0 | cut -d' ' -f2-  | sort -n > trainset
+    ../sof*/src/sof*ml --iterations 2000000 --training_file trainset --dimensionality 1100000 --model_out svm_model
       
-      
-../sof*/src/sof*ml --test_file svm.fil.tr0 --dimensionality 1100000 --model_in svm_model --results_file pout 
-
-
- cat svm.fil.tr0 | cut -d' ' -f1 | tr -d ' ' > docfils_temp
+        
+    ../sof*/src/sof*ml --test_file svm.fil.tr0 --dimensionality 1100000 --model_in svm_model --results_file pout 
+    cat svm.fil.tr0 | cut -d' ' -f1 | tr -d ' ' > docfils_temp
  
- 
-python sort.py docfils_temp pout seed 0
-
-
-
+    
+    python sort.py docfils_temp pout seed 0
 
 # 
-python selectT.py valor_R $int
-export j=`cat flagOut `
-# 
-export t=`wc -l < U$j`
+    python selectT.py valor_R $int
+    export j=`cat flagOut `
+    # 
+    export t=`wc -l < U$j`
 
-temp=$(($NDUN-$t))
+    temp=$(($NDUN-$t))
 
-tail -$temp newtopic.sort > result
-echo "valor t =$t valor j =$j valor temp =$temp"
+    tail -$temp newtopic.sort > result
+
+    echo "valor t =$t valor j =$j valor temp =$temp"
 # 
 # echo "valor do $j--$int--threshol $t-"
 # 
