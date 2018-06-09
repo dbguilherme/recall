@@ -5,7 +5,7 @@ export LANG=C
 export LC_ALL=C
 R=100
 
-NDUN=0
+export NDUN=`wc -l < docfils.tr0`
 L=10
 R=100
 export LAMBDA=0.0001
@@ -20,8 +20,8 @@ else
 fi
 
 
-rm -f new[0-9][0-9].$TOPIC tail[0-9][0-9].$TOPIC self*.$TOPIC gold*.$TOPIC
-rm -f sub_new[0-9][0-9].$TOPIC 
+rm -f new*.$TOPIC tail*.$TOPIC self*.$TOPIC gold*.$TOPIC
+rm -f sub_new*.$TOPIC 
 touch new00.$TOPIC
 #rm rel.$TOPIC.fil
 rm -f trainset
@@ -32,7 +32,7 @@ rm -f trainset
 
 echo "# 3: Draw a large uniform random sample U of size N from the document population."
 
-shuf -n  1000  docfils.tr0 | cut -d$' ' -f2  > sample.$TOPIC
+shuf -n  $NDUN  docfils.tr0 | cut -d$' ' -f2  > sample.$TOPIC
 
 
 echo "# 4: Select a sub-sample size n."
@@ -95,7 +95,7 @@ echo " run classifier"
       
       ../sof*/src/sof*ml --test_file w --dimensionality 1100000 --model_in svm_model --results_file pout 
 
-
+cp svm_model svm_model$N
 
 echo "# 10: Select the highest-scoring B  $B documents from U ."
 
@@ -118,7 +118,7 @@ echo "# 10: Select the highest-scoring B  $B documents from U ."
 #            # cut -f1 pout.svm.test.$TOPIC.* | ../fixnum | cat -n | join -o2.2,1.2 -t$'\t' - docfils.$TOPIC > inlr.out
 #             sort seed | join -v2 - inlr.out | sort  -k2 > newtopic
 #             join -1 1 -2 2 -v2 <(sort -k 1 seed) <(sort -k 2 pout) > temp
-             python sort.py docfils_temp pout seed
+             python sort.py docfils_temp pout seed 1
              
            #  cat seed | join -v2 - newtopic.sort > new$N.$TOPIC
              tail -$B  newtopic.sort  | cut -d' ' -f1 >  new$N.$TOPIC
@@ -134,6 +134,8 @@ echo "11: If R̂ = 1 or B ≤ n, let b = B; otherwise let b = n."
             echo "valor do b é $b"
        fi
        
+       
+
 echo "valor do b $b"
 echo "# 12: Draw a random sub-sample of size b from the B docu-ments."
 shuf -n $b  new$N.$TOPIC > sub_new$N.$TOPIC
@@ -165,7 +167,7 @@ export R=$(($R+$temp1))
 # export C= $((B + new_r ))
 echo "novo R $R---"
 echo "$i $R" >> valor_R
-cat  w | cut -d' ' -f1 > U$N
+cat newtopic.sort > U$N
 echo "# 17: Increase B by 10"
 
 temp=`echo "scale=5; ($B / 10)" | bc`
@@ -201,15 +203,19 @@ echo "----------------------------------------$labelEffort  $truePositive"
 
 done   
 echo " 20: Estimate ρ̂ = 1.05 "
-export prevalence=`echo "scale=5; ($R * 1.05) / 1000 " | bc`
+export prevalence=`echo "scale=5; ($R * 1.05) / $NDUN  " | bc`
 echo "prevalence $prevalence"
       
-export m=`echo "scale=5; ($prevalence * 1000 ) * 0.9 " | bc`       
+export m=`echo "scale=5; ($prevalence * $NDUN ) * 0.9 " | bc`       
 echo "# 19: Train the final classifier on all labeled documents."
 
 int=${m%.*}
 
-cat seed.$TOPIC sub_new[0-9][0-9].$TOPIC | uniq > seed
+
+
+
+
+cat seed.$TOPIC sub_new*.$TOPIC | uniq > seed
 cat seed | sort | uniq | join - rel.$TOPIC.fil | cut -d' ' -f1 | sed -e 's/^/1 /' > x
 cat seed | sort | uniq | join - rel.$TOPIC.fil -v1 | cut -d' ' -f1 | sed -e 's/^/-1 /' >> x      
 
@@ -226,14 +232,38 @@ sort -k2 x | join -12 - svm.fil.tr0 | cut -d' ' -f2-  | sort -n > trainset
  cat svm.fil.tr0 | cut -d' ' -f1 | tr -d ' ' > docfils_temp
  
  
-python sort.py docfils_temp pout seed
+python sort.py docfils_temp pout seed 0
+
+
+
+
+# 
+python selectT.py valor_R $int
+export j=`cat flagOut `
+# 
+export t=`wc -l < U$j`
+
+temp=$(($NDUN-$t))
+
+tail -$temp newtopic.sort > result
+echo "valor t =$t valor j =$j valor temp =$temp"
+# 
+# echo "valor do $j--$int--threshol $t-"
+# 
+# python filterResult.py newtopic.sort $t
+
+
              
            #  cat seed | join -v2 - newtopic.sort > new$N.$TOPIC
-tail -$int  newtopic.sort  | cut -d' ' -f1 >  result
+#cat  newtopic.sort  | cut -d' ' -f1 >  result
 
-export r=`cat result| sort | uniq | join - rel.$TOPIC.fil | uniq | wc -l`
+export r=`cat result | sort | uniq | join - rel.$TOPIC.fil | uniq | wc -l`
 
-echo "resultado final $r ------$int"
+total=`wc -l < rel.$TOPIC.fil`
+recall=`echo "scale=5; ($r / $total)" | bc`
+precisao=`echo "scale=5; ($r / $temp)" | bc`
+echo "resultado final $r ------$temp  recall $recall  precisao $precisao"
+
 
 #     cat svm.fil.$TOPIC | shuf -n $R | sed -e's/[^ ]*/-1/' >> trainset1 &
 #     (

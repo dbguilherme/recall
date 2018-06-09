@@ -28,7 +28,9 @@ for i in range(len(lA)):
     if (int(lA[i][0])!=int(lB[i][1])):
         print (lB[i][1])
     #iii+=1
-
+    if int(lA[i][0]) ==10005:
+        print ("okkkk")
+    
 l2.sort(key=lambda l2:l2[0])
 
 
@@ -44,9 +46,13 @@ f3 = open ( sys.argv[3] , 'r')
 lC = [(line.replace("\n",""))  for line in f3 ]
 #print (lC)
 for linha in l2:
-    if (not str(linha[1]) in lC):
-    #print (linha)
+    if (sys.argv[4] == "1" and not str(linha[1]) in lC):
+        #print (linha)
         f1.write(str(linha[1]).zfill(5) + " " + str(linha[0]) +"\n")
+    if (sys.argv[4] == "0"):
+    
+        f1.write(str(linha[1]).zfill(5) + " " + str(linha[0]) +"\n")
+        #print ("errrooooooooooooooooO")
     #for linha in lC:
         ##print (str(linha[0]) +" " +  str(element[1]))
         #if(linha[0] == str(element[1])):
