@@ -20,16 +20,15 @@ lB = [[(num.replace("\n","")) for num in line.split('\t')] for line in f2 ]
 l2=[]
 iii=0
 for i in range(len(lA)):
-    
+    #print(lA[i] )
+    #print(lB[i][0])
     col=[]
     col.append((float(lB[i][0])))
-    col.append(int(lA[i][0]))
+    col.append(str(lA[i][0]))
     l2.append(col)
-    if (int(lA[i][0])!=int(lB[i][1])):
-        print (lB[i][1])
+   
     #iii+=1
-    if int(lA[i][0]) ==10005:
-        print ("okkkk")
+   
     
 l2.sort(key=lambda l2:l2[0])
 
